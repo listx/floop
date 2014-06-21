@@ -102,3 +102,11 @@ u64 get_rand_n(struct xs_prng *rng, u64 n)
 	while ((x = xs1024_next(rng)) > rand_limit) {};
 	return x % n;
 }
+
+void gen_stream(struct rng_stream *rstream, size_t count)
+{
+	size_t i;
+	for (i = 0; i < count; i++) {
+		rstream->buf[i] = xs1024_next(&rstream->rng);
+	}
+}
