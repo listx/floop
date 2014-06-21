@@ -27,7 +27,8 @@
 
 #define sentinel(M, ...)  { log_err(M, ##__VA_ARGS__); errno=0; goto error; }
 
-#define check_mem(A) check((A), "memory exhausted")
+/* Only use with malloc(). */
+#define check_mem(A) check((A != NULL), "memory exhausted\n")
 
 #define check_debug(A, M, ...) if(!(A)) { debug(M, ##__VA_ARGS__); errno=0; goto error; }
 

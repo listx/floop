@@ -22,9 +22,12 @@ inline u64 xs1024_next(struct xs_prng *rng)
 }
 
 /*
- * According to Vigna, xs1024 needs to generate at least "a few hundreds" (sic)
+ * According to Vigna, xs1024 needs to generate at least "a few hundreds"[1] (sic)
  * iterations to start behaving correctly. Thus, we use a simple warmup function
  * to get the generator ready.
+ *
+ * [1]: Sebastiano Vigna, "An experimental exploration of Marsaglia's xorshift
+ * generators, scrambled" (2014), p. 24.
  */
 void xs1024_warmup(struct xs_prng *rng)
 {
@@ -44,7 +47,7 @@ void xs1024_seed(struct xs_prng *rng)
 
 	elements = 16;
 	urandom = fopen("/dev/urandom", "r");
-	fread(&rng->s, sizeof (*(rng->s)), elements, urandom); /* fread(destination, element_size, no. of elements, source) */
+	fread(&rng->s, sizeof (*(rng->s)), elements, urandom);
 	fclose(urandom);
 
 	rng->p = 0;
@@ -65,7 +68,21 @@ void xs1024_seed_manual(struct xs_prng *rng, u64 seed)
 	rng->p = 0;
 }
 
-/* FIXME: actually randomly shuffle the list, instead of just reversing it. */
+
+/*
+ * Write random bytes into a buffer.
+ */
+void gen_stream(struct rng_stream *rstream, size_t count)
+{
+	size_t i;
+	for (i = 0; i < count; i++) {
+		rstream->buf[i] = xs1024_next(&rstream->rng);
+	}
+}
+
+/*
+ * Reverse an array in-place; this is only used for debugging purposes.
+ */
 void reverse(int *arr, size_t arr_size)
 {
 	size_t i;
@@ -77,12 +94,15 @@ void reverse(int *arr, size_t arr_size)
 	}
 }
 
+/*
+ * Randomly shuffle an array in-place. This uses the Fischer-Yates shuffling
+ * algorithm.
+ */
 void shuffle(struct xs_prng *rng, int *arr, size_t arr_size)
 {
 	int tmp;
 	size_t i, j;
 
-	/* perform fischer-yates shuffle */
 	for (i = 0; i < (arr_size - 1); i++) {
 		j = i + get_rand_n(rng, arr_size - i);
 		tmp = arr[i];
@@ -101,12 +121,4 @@ u64 get_rand_n(struct xs_prng *rng, u64 n)
 	rand_limit = 0xffffffffffffffffULL - n;
 	while ((x = xs1024_next(rng)) > rand_limit) {};
 	return x % n;
-}
-
-void gen_stream(struct rng_stream *rstream, size_t count)
-{
-	size_t i;
-	for (i = 0; i < count; i++) {
-		rstream->buf[i] = xs1024_next(&rstream->rng);
-	}
 }

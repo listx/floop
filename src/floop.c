@@ -28,7 +28,7 @@ const char optstring[] = "hvt:b:c:";
 
 int main(int argc, char **argv)
 {
-	int i, o;
+	int o;
 
 	if (argc == 1) {
 		show_help();
@@ -47,10 +47,6 @@ int main(int argc, char **argv)
 			break;
 		case 't':
 			FLOOP_THREADS = atoi(optarg);
-			bucket_list = malloc(sizeof(int) * FLOOP_THREADS);
-			for (i = 0; (unsigned int)i < FLOOP_THREADS; i++) {
-				bucket_list[i] = i;
-			}
 			break;
 		case 'b':
 			FLOOP_BUFSIZE_PER_THREAD = strtol(optarg, NULL, 16);
@@ -64,13 +60,17 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Exit if there were any unrecognized arguments */
-	if (optind < argc)
+	/* Exit if there were any unrecognized arguments. */
+	if (optind < argc) {
 		printf("unrecognized option: `%s'", argv[optind]);
+		goto error;
+	}
 
-	manager_thread();
+	master_thread();
 exit:
 	exit(EXIT_SUCCESS);
+error:
+	exit(EXIT_FAILURE);
 }
 
 void show_help(void)
