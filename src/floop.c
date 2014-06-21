@@ -28,7 +28,7 @@ const char optstring[] = "hvt:b:c:";
 
 int main(int argc, char **argv)
 {
-	int o;
+	int o, tmp;
 
 	if (argc == 1) {
 		show_help();
@@ -46,13 +46,25 @@ int main(int argc, char **argv)
 			goto exit;
 			break;
 		case 't':
-			FLOOP_THREADS = atoi(optarg);
+			tmp = strtol(optarg, NULL, 10);
+
+			if (tmp < 0 || tmp > 64) {
+				sentinel("threads must be between 1 and 64, inclusive");
+			} else
+				FLOOP_THREADS = tmp;
+
 			break;
 		case 'b':
 			FLOOP_BUFSIZE_PER_THREAD = strtol(optarg, NULL, 16);
 			break;
 		case 'c':
-			FLOOP_ITERATIONS = atoi(optarg);
+			tmp = strtol(optarg, NULL, 10);
+
+			if (tmp < 0) {
+				sentinel("iterations cannot be less than 0");
+			} else
+				FLOOP_ITERATIONS = tmp;
+
 			break;
 		default:
 			printf("unclean arguments\n");
@@ -61,10 +73,8 @@ int main(int argc, char **argv)
 	}
 
 	/* Exit if there were any unrecognized arguments. */
-	if (optind < argc) {
-		printf("unrecognized option: `%s'", argv[optind]);
-		goto error;
-	}
+	if (optind < argc)
+		sentinel("unrecognized option: `%s'", argv[optind]);
 
 	master_thread();
 exit:
