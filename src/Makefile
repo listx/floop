@@ -9,7 +9,7 @@ CFLAGS += -pipe
 CFLAGS += -DNDEBUG
 
 LFLAGS += -lrt -pthread
-OBJECTS = floop.o random.o thread.o types.o
+OBJECTS = main.o random.o thread.o types.o
 
 all: $(OBJECTS)
 		$(CC) $(CFLAGS) $(OBJECTS) $(LFLAGS) -o floop
