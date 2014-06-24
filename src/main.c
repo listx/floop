@@ -19,7 +19,7 @@ struct option longopts[] = {
 	{"help",	0,	NULL,	'h'},
 	{"version",	0,	NULL,	'v'},
 	{"threads",	1,	NULL,	't'},
-	{"bufsize",	1,	NULL,	'b'},
+	{"thread-buf",	1,	NULL,	'b'},
 	{"count",	1,	NULL,	'c'},
 	{0,0,0,0}
 };
