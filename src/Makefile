@@ -8,7 +8,7 @@ CFLAGS += -pipe
 # Comment to enable debugging macros.
 CFLAGS += -DNDEBUG
 
-LFLAGS += -lrt -pthread
+LFLAGS += -pthread
 OBJECTS = main.o random.o thread.o types.o
 
 all: $(OBJECTS)
