@@ -26,6 +26,7 @@ struct worker {
 };
 
 extern void init_thread_vars(void);
+extern void destroy_thread_vars(void);
 extern void init_threads(int threads, struct worker *worker);
 extern void *start_routine(void *worker);
 extern void idle_work_loop(struct worker *worker);

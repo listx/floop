@@ -28,7 +28,9 @@ const char optstring[] = "hvt:b:c:";
 
 int main(int argc, char **argv)
 {
-	int o, tmp;
+	int o, ok, tmp;
+
+	errcode = 0;
 
 	if (argc == 1) {
 		show_help();
@@ -76,7 +78,12 @@ int main(int argc, char **argv)
 	if (optind < argc)
 		sentinel("unrecognized option: `%s'", argv[optind]);
 
-	master_thread();
+	ok = master_thread();
+	if (ok != 0) {
+		goto error;
+	} else {
+		goto exit;
+	}
 exit:
 	exit(EXIT_SUCCESS);
 error:

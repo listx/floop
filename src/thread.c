@@ -28,16 +28,35 @@ void init_thread_vars(void)
 }
 
 /*
+ * Destroy mutexes and condition variables. Report any errors.
+ */
+void destroy_thread_vars(void)
+{
+	int ok;
+
+	ok = pthread_mutex_destroy(&lock);
+	if (ok != 0)
+		fatal(1, "pthread_mutex_destroyt() failed");
+
+	ok = pthread_cond_destroy(&wake);
+	if (ok != 0)
+		fatal(1, "pthread_cond_destroy() failed");
+}
+
+/*
  * Wake up worker threads and put them in an idle loop; we use a condition
  * variable to wake them up and put them to work.
  */
 void init_threads(int threads, struct worker *worker)
 {
-	int i;
+	int i, ok;
 
 	for (i = 0; i < threads; i++) {
 		worker[i].thread_id = i;
-		pthread_create(&worker[i].pthread_id, NULL, start_routine, (void*)&worker[i]);
+		ok = pthread_create(&worker[i].pthread_id, NULL, start_routine, (void*)&worker[i]);
+		if (ok != 0) {
+			fatal(ok, "pthread_create() failed");
+		}
 		debug("thread %d created\n", worker[i].thread_id);
 	}
 }
@@ -66,11 +85,12 @@ void *start_routine(void *worker)
  */
 void idle_work_loop(struct worker *worker)
 {
+	size_t i;
 	int bucket;
 	u64 *buf_master;
-	buf_master = worker->rstream.buf;
-	int i;
 	u64 bit;
+
+	buf_master = worker->rstream.buf;
 
 #ifdef NDEBUG
 	xs1024_seed(&worker->rstream.rng);
@@ -79,7 +99,11 @@ void idle_work_loop(struct worker *worker)
 
 	pthread_mutex_lock(&lock);
 	debug("holder of lock: thread %d\n", worker->thread_id);
-	for (i = 0, bit = 1;;i++) {
+	for (i = 0, bit = 1;; i++) {
+		if (FLOOP_ITERATIONS != 0 && i == FLOOP_ITERATIONS) {
+			pthread_mutex_unlock(&lock);
+			break;
+		}
 		/*
 		 * Sleep until woke. We use a system of set bits (called
 		 * 'flags') in a single u64 structure. The rule is that the
@@ -89,7 +113,7 @@ void idle_work_loop(struct worker *worker)
 		 * switch it off when we're done here.
 		 */
 		while (!(thread_workers & (bit << worker->thread_id))) {
-			debug("SLEEPING thread %d; iteration %d...\n", worker->thread_id, i);
+			debug("SLEEPING thread %d; iteration %zd...\n", worker->thread_id, i);
 			pthread_cond_wait(&wake, &lock);
 		}
 
@@ -130,21 +154,29 @@ void idle_work_loop(struct worker *worker)
 		 */
 		thread_workers &= ~(bit << worker->thread_id);
 	}
-
 }
 
 int master_thread(void)
 {
-	int i, j;
+	size_t i, j;
 	struct rng_stream rstream;
 	u64 *buf_master;
 	struct worker *worker;
 
 	/*
-	 * Set up master thread's state; the two components are its buffer (the
-	 * master buffer, and its segments that will become the "buckets" for
-	 * each thread to write into), and its own PRNG (to determine how the
-	 * buckets are randomized after every iteration).
+	 * We must set these to-be-malloc'ed pointers to NULL here, in case we
+	 * skip malloc and decide to just all free() on them from the get-go
+	 * (this happens when a malloc error occurs --- we skip down to the
+	 * 'error' section with a goto, thanks to check_mem()..
+	 */
+	buf_master = NULL;
+	worker = NULL;
+
+	/*
+	 * Set up master thread's state; the two components are buf_master (the
+	 * master buffer and its segments that will become the "buckets" for
+	 * each thread to write into), and rstream.buf (its own PRNG to
+	 * determine how the buckets are randomized after every iteration).
 	 */
 	rstream.buf = (u64 *)malloc(sizeof(u64) * FLOOP_BUFSIZE_PER_THREAD);
 	check_mem(rstream.buf);
@@ -160,7 +192,7 @@ int master_thread(void)
 	 */
 	worker = malloc(sizeof(struct worker) * FLOOP_THREADS);
 	check_mem(worker);
-	for (i = 0; (unsigned int)i < FLOOP_THREADS; i++) {
+	for (i = 0; i < FLOOP_THREADS; i++) {
 		worker[i].working = false;
 		worker[i].rstream.buf = buf_master;
 	}
@@ -168,7 +200,7 @@ int master_thread(void)
 	/* Set up worker threads' buckets. */
 	bucket_list = malloc(sizeof(int) * FLOOP_THREADS);
 	check_mem(bucket_list);
-	for (i = 0; (unsigned int)i < FLOOP_THREADS; i++) {
+	for (i = 0; i < FLOOP_THREADS; i++) {
 		bucket_list[i] = i;
 	}
 
@@ -185,6 +217,9 @@ int master_thread(void)
 #endif
 
 	for (i = 0;;i++) {
+		if (FLOOP_ITERATIONS != 0 && i == FLOOP_ITERATIONS) {
+			break;
+		}
 		pthread_mutex_lock(&lock);
 #ifdef NDEBUG
 		/*
@@ -202,7 +237,7 @@ int master_thread(void)
 		reverse(bucket_list, FLOOP_THREADS);
 #endif
 		debug("master: waking up threads...(buf_master at %p)\n", buf_master);
-		for (j = 0; (unsigned int)j < FLOOP_THREADS; j++) {
+		for (j = 0; j < FLOOP_THREADS; j++) {
 			thread_workers |= 1 << j;
 			pthread_cond_signal(&wake);
 		}
@@ -225,11 +260,10 @@ int master_thread(void)
 			}
 			pthread_mutex_unlock(&lock);
 		}
-		debug("master: FWRITE %zd bytes to stdout on iteration %d\n"
+		debug("master: FWRITE %zd bytes to stdout on iteration %zd\n"
 		      , sizeof(u64) * FLOOP_BUFSIZE_PER_THREAD * FLOOP_THREADS
 		      , i);
 		fwrite(buf_master, sizeof(*buf_master), FLOOP_BUFSIZE_PER_THREAD * FLOOP_THREADS, stdout);
-		fflush(stdout);
 #ifndef NDEBUG
 		/* If debugging, write all 0's to the master buffer again. */
 		memset((void *)buf_master, 0, sizeof(u64) * FLOOP_BUFSIZE_PER_THREAD * FLOOP_THREADS);
@@ -238,6 +272,13 @@ int master_thread(void)
 	}
 
 error:
-	exit(EXIT_FAILURE);
-
+	for (i = 0; i < FLOOP_THREADS; i++) {
+		pthread_join(worker[i].pthread_id, NULL);
+	}
+	destroy_thread_vars();
+	free(buf_master);
+	free(rstream.buf);
+	free(worker);
+	free(bucket_list);
+	return errcode;
 }

@@ -7,6 +7,8 @@
 #include <stdlib.h> /* exit() */
 #include <string.h> /* strerror */
 
+int errcode;
+
 #ifdef NDEBUG
 #define debug(M, ...)
 #else
@@ -23,13 +25,13 @@
 
 #define log_info(M, ...) fprintf(stderr, "[INFO] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
-#define check(A, M, ...) if(!(A)) { log_err(M, ##__VA_ARGS__); errno=0; goto error; }
+#define check(A, M, E, ...) if(!(A)) { log_err(M, ##__VA_ARGS__); errno = 0; errcode = E; goto error; }
 
-#define sentinel(M, ...)  { log_err(M, ##__VA_ARGS__); errno=0; goto error; }
+#define sentinel(M, ...)  { log_err(M, ##__VA_ARGS__); errno = 0; goto error; }
 
 /* Only use with malloc(). */
-#define check_mem(A) check((A != NULL), "memory exhausted\n")
+#define check_mem(A) check((A != NULL), "memory exhausted\n", ENOMEM)
 
-#define check_debug(A, M, ...) if(!(A)) { debug(M, ##__VA_ARGS__); errno=0; goto error; }
+#define check_debug(A, M, ...) if(!(A)) { debug(M, ##__VA_ARGS__); errno = 0; goto error; }
 
 #endif
