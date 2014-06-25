@@ -22,6 +22,21 @@ The iteration is controlled with `--count`, which when set to 0 will make floop 
 
 Using `dd` is also useful because it gives you information on how fast it was able to write the bytes to the destination.
 
+#### Actual Use Case
+
+The following was on a Western Digital Passport Ultra 1TB Portable External USB 3.0 Hard Drive (WDBZFP0010BBL-NESN).
+```
+ $ floop -t 8 -b 0x200000 -c 0 | pv -bartpes 1000170586112 | dd bs=128M of=/dev/sde
+dd: error writing ‘/dev/sde’: No space left on device==========================================================> ] 99% ETA 0:00:00
+ 931GiB 3:28:57 [76.1MiB/s] [76.1MiB/s] [======================================================================>] 100%
+0+9287529 records in
+0+9287528 records out
+1000170586112 bytes (1.0 TB) copied, 12592.6 s, 79.4 MB/s
+```
+
+The speed is not impressive, because of the slow speed of the drive itself.
+In comparison, using openssl (using AES encryption to encrypt a stream of 0s and using that data as output) with `openssl enc -aes-256-ctr -pass pass:"$(dd if=/dev/random bs=128 count=1 2>/dev/null | base64)" -nosalt </dev/zero` was more than 2x slower than floop on this drive.
+
 ## Technical Notes
 
 Floop works by creating worker threads, and one big master buffer.
