@@ -46,7 +46,7 @@ Before the start of the next iteration, the main thread randomly reassigns to ea
 
 ### The PRNG Algorithm
 
-Floop uses a version of George Marsaglia's `xorshift` PRNG, written by Sebastiano Vigna, which was released in his paper "An experimental exploration of Marsaglia's xorshift generators, scrambled" (2014).
+Floop uses a version of George Marsaglia's `xorshift` PRNG[^xorshift], written by Sebastiano Vigna, which was released in his paper "An experimental exploration of Marsaglia's xorshift generators, scrambled" (2014).
 This algorithm has excellent randomness properties (as described in the paper), and also has a large period of 2^1024 -1.
 It uses a state of 16 bytes to seed the PRNG.
 All worker threads have its own PRNG state (for the generation of random bytes to the master buffer), and the main thread also has its own PRNG state (for randomizing the master thread segments amongst the worker threads).
@@ -65,3 +65,5 @@ If you are paranoid about security, you should really only use `/dev/random` as 
 However, note that Floop's purpose is to only prepare a drive to be used as an encrypted medium --- its sole purpose is to hide which blocks have actual data.
 The more you use the encrypted medium with a strong cipher like AES, the stronger Floop's impact will become.
 This is because more and more of Floop's bytes on the disk will get replaced by cryptographically secure bytes of your encryption mechanism.
+
+[^xorshift]: http://xorshift.di.unimi.it/
