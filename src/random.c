@@ -62,7 +62,7 @@ void xs1024_seed_manual(struct xs_prng *rng, u64 seed)
 
 	elements = 16;
 	for (i = 0; i < elements; i++) {
-		rng->s[i] = seed + 1;
+		rng->s[i] = seed + i;
 	}
 
 	rng->p = 0;
