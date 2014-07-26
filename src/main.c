@@ -10,7 +10,7 @@
 #include "random.h"
 #include "thread.h"
 
-#define FLOOP_VERSION "0.2.0"
+#define FLOOP_VERSION "0.2.1"
 
 void show_help(void);
 void show_ver(void);
