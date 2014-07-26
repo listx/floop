@@ -48,9 +48,8 @@ Before the start of the next iteration, the main thread randomly reassigns to ea
 
 Floop uses a version of George Marsaglia's `xorshift` PRNG[^xorshift], written by Sebastiano Vigna, which was released in his paper "An experimental exploration of Marsaglia's xorshift generators, scrambled" (2014).
 This algorithm has excellent randomness properties (as described in the paper), and also has a large period of 2^1024 -1.
-It uses a state of 16 bytes to seed the PRNG.
+It uses an internal state of 128 bytes (1024 bits), and Floop uses `/dev/random` to initialize the state.
 All worker threads have its own PRNG state (for the generation of random bytes to the master buffer), and the main thread also has its own PRNG state (for randomizing the master thread segments amongst the worker threads).
-Floop uses `/dev/random` to seed all threads.
 
 ### Performance
 
