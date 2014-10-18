@@ -105,7 +105,7 @@ void idle_work_loop(struct worker *worker)
 			break;
 		}
 		/*
-		 * Sleep until woke. We use a system of set bits (called
+		 * Sleep until woken. We use a system of set bits (called
 		 * 'flags') in a single u64 structure. The rule is that the
 		 * thread only awakes and performs work if the bit is turned on
 		 * to 1. Once we finish work, we turn off that bit
