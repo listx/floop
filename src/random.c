@@ -114,11 +114,11 @@ void shuffle(struct xs_prng *rng, int *arr, size_t arr_size)
 /*
  * Get a random number between 0 and (n - 1).
  */
-u64 get_rand_n(struct xs_prng *rng, u64 n)
+u64 get_rand_n(struct xs_prng *rng, u64 bound)
 {
 	assert(n > 1);
-	u64 x, rand_limit;
-	rand_limit = 0xffffffffffffffffULL - n;
-	while ((x = xs1024_next(rng)) > rand_limit) {};
-	return x % n;
+	u64 r, threshold;
+	threshold = -bound % bound;
+	while ((r = xs1024_next(rng)) < threshold) {};
+	return r % bound;
 }
